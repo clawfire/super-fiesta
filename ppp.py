@@ -2,10 +2,15 @@ from PIL import Image
 import os
 
 
-def batch_square(folder_path, output_folder, side_length=90, background_color=(100, 0, 180)):
+def batch_square(folder_path, output_folder, side_length=95, background_color=(100, 0, 180)):
     # Assurez-vous que le dossier de sortie existe
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
+
+    # Taille fixe de l'image de sortie
+    output_size = 1080
+    # Calcul de la nouvelle taille cible
+    target_size = int(output_size * (side_length / 100))
 
     # Parcourez tous les fichiers dans le dossier spécifié
     for filename in os.listdir(folder_path):
@@ -13,10 +18,8 @@ def batch_square(folder_path, output_folder, side_length=90, background_color=(1
             file_path = os.path.join(folder_path, filename)
             img = Image.open(file_path)
 
-            # Calcul de la nouvelle taille du carré
-            max_dimension = max(img.width, img.height)
-            new_size = int(max_dimension * side_length / 100)
-            scale = min(new_size / img.width, new_size / img.height)
+            # Calculer la nouvelle taille de l'image pour que le côté le plus long corresponde à target_size
+            scale = target_size / max(img.width, img.height)
             new_width = int(img.width * scale)
             new_height = int(img.height * scale)
 
@@ -25,10 +28,10 @@ def batch_square(folder_path, output_folder, side_length=90, background_color=(1
                 (new_width, new_height), Image.Resampling.LANCZOS)
 
             # Créer une nouvelle image avec le fond de couleur et centrer l'image redimensionnée
-            new_img = Image.new('RGB', (new_size, new_size),
-                                color=background_color)
-            position = ((new_size - new_width) // 2,
-                        (new_size - new_height) // 2)
+            new_img = Image.new(
+                'RGB', (output_size, output_size), color=background_color)
+            position = ((output_size - new_width) // 2,
+                        (output_size - new_height) // 2)
             new_img.paste(resized_img, position)
 
             # Sauvegarder l'image
@@ -41,7 +44,8 @@ input_folder = input(f"Entrez le chemin du dossier source ({
                      current_directory} par défaut) : ") or current_directory
 output_folder = input("Entrez le chemin du dossier de sortie ('output' par défaut) : ") or os.path.join(
     current_directory, "output")
-side_length = input("Entrez le pourcentage de la taille (95 par défaut) : ")
+side_length = input(
+    "Entrez le pourcentage de la taille pour l'image intégrée (95 par défaut) : ")
 background_color_input = input(
     "Entrez la couleur de fond en format RGB (100,0,180 par défaut) : ")
 
