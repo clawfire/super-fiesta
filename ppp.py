@@ -18,7 +18,7 @@ def get_files_with_tag(folder_path, tag):
         return []
 
 
-def batch_square(folder_path, output_folder, side_length=95, background_color=(100, 0, 180), use_tags=False, tag=None):
+def batch_square(folder_path, output_folder, side_length=95, background_color=(100, 0, 180), use_tags=False, tag=None, jpeg_quality=95):
     # Assurez-vous que le dossier de sortie existe
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -46,8 +46,8 @@ def batch_square(folder_path, output_folder, side_length=95, background_color=(1
             position = ((output_size - new_width) // 2,
                         (output_size - new_height) // 2)
             new_img.paste(resized_img, position)
-            new_img.save(os.path.join(
-                output_folder, os.path.basename(file_path)))
+            new_img.save(os.path.join(output_folder, os.path.basename(
+                file_path)), quality=jpeg_quality)
             print(f"Progression: {
                   index + 1}/{total_files} fichiers traités.", end='\r')
 
@@ -64,6 +64,8 @@ side_length = input(
     "Entrez le pourcentage de la taille pour l'image intégrée (95 par défaut) : ")
 background_color_input = input(
     "Entrez la couleur de fond en format RGB (100,0,180 par défaut) : ")
+jpeg_quality = input(
+    "Entrez la qualité JPEG (1-100, où 100 est la meilleure qualité, 95 par défaut) : ")
 use_tags = input(
     "Voulez-vous filtrer les images par tag ? (oui/non) : ").lower() == 'oui'
 tag = input(
@@ -73,6 +75,7 @@ tag = input(
 side_length = int(side_length) if side_length else 95
 background_color = tuple(map(int, background_color_input.split(
     ','))) if background_color_input else (100, 0, 180)
+jpeg_quality = int(jpeg_quality) if jpeg_quality else 95
 
 batch_square(input_folder, output_folder, side_length,
-             background_color, use_tags, tag)
+             background_color, use_tags, tag, jpeg_quality)
