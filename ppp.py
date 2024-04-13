@@ -6,33 +6,33 @@ from PIL import Image
 
 
 def get_files_with_tag(folder_path, tag):
-    """Utilise mdfind pour récupérer les fichiers avec un tag spécifique dans un dossier."""
+    """Use mdfind to retrieve files with a specific tag within a folder."""
     query = f"kMDItemUserTags == '{tag}'"
     cmd = ['mdfind', '-onlyin', folder_path, query]
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode == 0:
-        # Split et ignorer la dernière ligne vide
+        # Split and ignore the last empty line
         return result.stdout.split('\n')[:-1]
     else:
-        print("Erreur lors de la recherche des tags")
+        print("Error while searching for tags")
         return []
 
 
 def batch_square(folder_path, output_folder, side_length=95, background_color=(100, 0, 180), use_tags=False, tag=None, jpeg_quality=95):
-    # Assurez-vous que le dossier de sortie existe
+    # Ensure the output folder exists
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-    # Taille fixe de l'image de sortie
+    # Fixed size of the output image
     output_size = 1080
-    # Calcul de la nouvelle taille cible
+    # Calculate the new target size
     target_size = int(output_size * (side_length / 100))
 
     files_to_process = [os.path.join(folder_path, f) for f in os.listdir(
         folder_path)] if not use_tags else get_files_with_tag(folder_path, tag)
     total_files = len(files_to_process)
 
-    # Parcourez tous les fichiers dans le dossier spécifié ou filtré par tags
+    # Process all files in the specified folder or filtered by tags
     for index, file_path in enumerate(files_to_process):
         if file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
             img = Image.open(file_path)
@@ -48,30 +48,29 @@ def batch_square(folder_path, output_folder, side_length=95, background_color=(1
             new_img.paste(resized_img, position)
             new_img.save(os.path.join(output_folder, os.path.basename(
                 file_path)), quality=jpeg_quality)
-            print(f"Progression: {
-                  index + 1}/{total_files} fichiers traités.", end='\r')
+            print(f"Progress: {
+                  index + 1}/{total_files} files processed.", end='\r')
 
-    print()  # Pour s'assurer qu'on passe à la ligne suivante à la fin du traitement
+    print()  # Ensure we move to the next line after processing
 
 
-# Demande des paramètres à l'utilisateur avec des valeurs par défaut
+# Request parameters from the user with default values
 current_directory = os.getcwd()
-input_folder = input(f"Entrez le chemin du dossier source ({
-                     current_directory} par défaut) : ") or current_directory
-output_folder = input("Entrez le chemin du dossier de sortie ('output' par défaut) : ") or os.path.join(
+input_folder = input(f"Enter the path to the source folder ({
+                     current_directory} by default): ") or current_directory
+output_folder = input("Enter the path to the output folder ('output' by default): ") or os.path.join(
     current_directory, "output")
 side_length = input(
-    "Entrez le pourcentage de la taille pour l'image intégrée (95 par défaut) : ")
+    "Enter the percentage size for the embedded image (95 by default): ")
 background_color_input = input(
-    "Entrez la couleur de fond en format RGB (100,0,180 par défaut) : ")
+    "Enter the background color in RGB format (100,0,180 by default): ")
 jpeg_quality = input(
-    "Entrez la qualité JPEG (1-100, où 100 est la meilleure qualité, 95 par défaut) : ")
+    "Enter the JPEG quality (1-100, where 100 is the best quality, 95 by default): ")
 use_tags = input(
-    "Voulez-vous filtrer les images par tag ? (oui/non) : ").lower() == 'oui'
-tag = input(
-    "Entrez le tag à utiliser (par défaut 'To Publish') : ") or "To Publish"
+    "Do you want to filter images by tag? (yes/no): ").lower() == 'yes'
+tag = input("Enter the tag to use (default 'To Publish'): ") or "To Publish"
 
-# Traitement des entrées avec des valeurs par défaut
+# Process the inputs with default values
 side_length = int(side_length) if side_length else 95
 background_color = tuple(map(int, background_color_input.split(
     ','))) if background_color_input else (100, 0, 180)
