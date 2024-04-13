@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import subprocess
 from PIL import Image
@@ -26,12 +28,12 @@ def batch_square(folder_path, output_folder, side_length=95, background_color=(1
     # Calcul de la nouvelle taille cible
     target_size = int(output_size * (side_length / 100))
 
-    files_to_process = folder_path
-    if use_tags and tag:
-        files_to_process = get_files_with_tag(folder_path, tag)
+    files_to_process = [os.path.join(folder_path, f) for f in os.listdir(
+        folder_path)] if not use_tags else get_files_with_tag(folder_path, tag)
+    total_files = len(files_to_process)
 
     # Parcourez tous les fichiers dans le dossier spécifié ou filtré par tags
-    for file_path in files_to_process:
+    for index, file_path in enumerate(files_to_process):
         if file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
             img = Image.open(file_path)
             scale = target_size / max(img.width, img.height)
@@ -46,6 +48,10 @@ def batch_square(folder_path, output_folder, side_length=95, background_color=(1
             new_img.paste(resized_img, position)
             new_img.save(os.path.join(
                 output_folder, os.path.basename(file_path)))
+            print(f"Progression: {
+                  index + 1}/{total_files} fichiers traités.", end='\r')
+
+    print()  # Pour s'assurer qu'on passe à la ligne suivante à la fin du traitement
 
 
 # Demande des paramètres à l'utilisateur avec des valeurs par défaut
