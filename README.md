@@ -1,8 +1,8 @@
-# PArty Picture Preparator
+# Party Picture Preparator
 
 This is a simple tool to prepare pictures for a party. It will run in a folder and edit all the pictures in it to prepare them to be shared on social media in a square format.
 
-## Installation
+## Prerequisites
 
 1. Clone the repository
 2. Install the dependencies with `pip install -r requirements.txt`
@@ -28,3 +28,13 @@ Run the script with `python party_picture_preparator.py` and follow the instruct
 - [ ] Add the possibility to specify the watermark transparency
 - [ ] Add resizing options to also generate original ratio pictures but with lower size, optimized for web sharing in terms of quality and weight, including watermark
 - [ ] Persist the user preferences in a configuration file
+
+## License
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+
+## Contact
+Thibault Milan - hello@thibaultmilan.com
+
+## Acknowledgments
+* Thanks to [ROAST](https://dice.fm/promoters/roast-p9ky) London for the design inspiration
+* Thanks to the Python community for the great libraries
