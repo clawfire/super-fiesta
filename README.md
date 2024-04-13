@@ -14,10 +14,12 @@ Run the script with `python party_picture_preparator.py` and follow the instruct
 ## Features
 
 * Contain pictures in a square format easy to share on social media
+* Can filter the pictures to edit by using macOS tags
 * Can specify the folder where the pictures are when running the script
 * Can specify the folder where the edited pictures will be saved when running the script
+* Can specify the percent of the square size you want to use (for the longest side of the original picture)
 * Can specify the background color when running the script
-* Can specify the max_size when running the script
+* Can specify the quality of the edited pictures when running the script
 
 ## Planned features / TODO
 
