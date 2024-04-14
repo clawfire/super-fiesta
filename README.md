@@ -31,7 +31,7 @@ Run the script with `python party_picture_preparator.py` and follow the instruct
 - [ ] Add the possibility to specify the watermark size
 - [ ] Add the possibility to specify the watermark transparency
 - [ ] Add resizing options to also generate original ratio pictures but with lower size, optimized for web sharing in terms of quality and weight, including watermark
-- [ ] Persist the user preferences in a configuration file
+- [x] Persist the user preferences in a configuration file
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
