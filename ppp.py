@@ -15,14 +15,14 @@ def get_files_with_tag(folder_path, tag):
         # Split and ignore the last empty line
         return result.stdout.split('\n')[:-1]
     else:
-        print("Error while searching for tags")
+        print(f"❌ Error while searching for tags in the folder: {folder_path}")
         return []
 
 
 def batch_square(folder_path, output_folder, side_length=95, background_color=(100, 0, 180), use_tags=False, tag=None, jpeg_quality=95):
     # Check if the input folder exists
     if not os.path.exists(folder_path):
-        print("❌ Folder doesn't exist")
+        print(f"❌ Folder doesn't exist: {folder_path}")
         return  # Exit the function if the folder does not exist
 
     # Ensure the output folder exists
@@ -38,7 +38,7 @@ def batch_square(folder_path, output_folder, side_length=95, background_color=(1
 
     # Check if there are any files to process
     if not files_to_process:
-        print("❌ Folder is empty or contains no images")
+        print(f"❌ Folder is empty or contains no images: {folder_path}")
         return  # Exit the function if there are no images to process
 
     # Fixed size of the output image
@@ -76,7 +76,7 @@ background_color_input = input(
 jpeg_quality = input(
     "Enter the JPEG quality (1-100, where 100 is the best quality, 95 by default): ")
 use_tags = input(
-    "Do you want to filter images by tag? (yes/no): ").lower() == 'yes'
+    "Do you want to filter images by tag? (Y/N, default Y): ").strip().lower() in ['n', 'no']
 tag = input("Enter the tag to use (default 'To Publish'): ") or "To Publish"
 
 # Process the inputs with default values
