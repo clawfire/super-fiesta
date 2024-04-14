@@ -1,6 +1,8 @@
-# Party Picture Preparator
+# Super Fiesta: Your Party Picture Butler
 
-This is a simple tool to prepare pictures for a party. It will run in a folder and edit all the pictures in it to prepare them to be shared on social media in a square format.
+Welcome to Super Fiesta, the ultimate tool designed to enhance your party pictures for social media sharing! This easy-to-use script transforms your images into perfectly square formats, ensuring they're primed for platforms like Instagram. Whether you're handling a batch of photos from a recent event or preparing images in advance, Super Fiesta streamlines the process, allowing you to customize size, background color, and more, all from your local folder.
+
+Get started today and make your party pictures pop!
 
 ## Prerequisites
 

@@ -3,6 +3,7 @@
 import os
 import subprocess
 from PIL import Image
+from tqdm import tqdm
 
 
 def get_files_with_tag(folder_path, tag):
@@ -32,8 +33,8 @@ def batch_square(folder_path, output_folder, side_length=95, background_color=(1
         folder_path)] if not use_tags else get_files_with_tag(folder_path, tag)
     total_files = len(files_to_process)
 
-    # Process all files in the specified folder or filtered by tags
-    for index, file_path in enumerate(files_to_process):
+    # Process all files in the specified folder or filtered by tags with a progress bar
+    for file_path in tqdm(files_to_process, desc="Processing Images", unit="file"):
         if file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
             img = Image.open(file_path)
             scale = target_size / max(img.width, img.height)
@@ -48,10 +49,6 @@ def batch_square(folder_path, output_folder, side_length=95, background_color=(1
             new_img.paste(resized_img, position)
             new_img.save(os.path.join(output_folder, os.path.basename(
                 file_path)), quality=jpeg_quality)
-            print(f"Progress: {
-                  index + 1}/{total_files} files processed.", end='\r')
-
-    print()  # Ensure we move to the next line after processing
 
 
 # Request parameters from the user with default values
