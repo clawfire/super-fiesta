@@ -85,7 +85,7 @@ def get_user_choice(prompt, choices, default=None):
         print(f"❌ Please enter one of: {', '.join(choices)}")
 
 
-def get_folder_path(prompt, default=None):
+def get_folder_path(prompt, default=None, create_if_missing=False):
     """Get folder path with validation and default handling."""
     while True:
         if default:
@@ -95,10 +95,30 @@ def get_folder_path(prompt, default=None):
         
         if os.path.exists(path) and os.path.isdir(path):
             return path
-        elif path == default and default:  # Allow default even if it doesn't exist yet
-            return path
+        elif not os.path.exists(path):
+            if create_if_missing:
+                create = get_user_choice(f"Directory '{path}' doesn't exist. Create it?", ["y", "n"], "y")
+                if create == "y":
+                    try:
+                        os.makedirs(path, exist_ok=True)
+                        print(f"✅ Created directory: {path}")
+                        return path
+                    except OSError as e:
+                        print(f"❌ Failed to create directory: {e}")
+                        retry = get_user_choice("Would you like to try a different path?", ["y", "n"], "y")
+                        if retry == "n":
+                            sys.exit("Operation cancelled by user.")
+                else:
+                    retry = get_user_choice("Would you like to try a different path?", ["y", "n"], "y")
+                    if retry == "n":
+                        sys.exit("Operation cancelled by user.")
+            else:
+                print(f"❌ Directory not found: {path}")
+                retry = get_user_choice("Would you like to try again?", ["y", "n"], "y")
+                if retry == "n":
+                    sys.exit("Operation cancelled by user.")
         else:
-            print(f"❌ Directory not found: {path}")
+            print(f"❌ Path exists but is not a directory: {path}")
             retry = get_user_choice("Would you like to try again?", ["y", "n"], "y")
             if retry == "n":
                 sys.exit("Operation cancelled by user.")
@@ -292,22 +312,36 @@ def main():
     
     print("\n📁 Select where to save the processed photos:")
     default_output = os.path.join(current_directory, "output")
-    output_folder = get_folder_path("   Output folder", default_output)
+    output_folder = get_folder_path("   Output folder", default_output, create_if_missing=True)
     
     # Preview files to be processed
     print_section("File Preview")
     print("🔍 Scanning for images...")
     
-    files_to_process = get_files_with_tag(input_folder, settings.get('tag', 'To Publish')) if settings['use_tags'] == 'yes' else [
+    # Get all image files first
+    all_image_files = [
         os.path.join(input_folder, f) for f in os.listdir(input_folder) 
         if f.lower().endswith(('.png', '.jpg', '.jpeg'))
     ]
     
+    # Get files to process based on settings
+    if settings['use_tags'] == 'yes':
+        files_to_process = get_files_with_tag(input_folder, settings.get('tag', 'To Publish'))
+        skipped_count = len(all_image_files) - len(files_to_process)
+        
+        if skipped_count > 0:
+            print(f"ℹ️  Found {len(all_image_files)} total images, {skipped_count} skipped (not tagged with '{settings.get('tag', 'To Publish')}')")
+    else:
+        files_to_process = all_image_files
+        skipped_count = 0
+    
     if not files_to_process:
-        print("❌ No images found to process!")
         if settings['use_tags'] == 'yes':
-            print(f"   Make sure photos are tagged with '{settings.get('tag', 'To Publish')}' in Finder.")
+            print(f"⚠️  No images found to process!")
+            print(f"   Found {len(all_image_files)} total images, but none are tagged with '{settings.get('tag', 'To Publish')}'")
+            print(f"   Tag some photos in Finder or disable tag filtering in configuration.")
         else:
+            print("❌ No images found to process!")
             print(f"   Make sure the folder contains PNG, JPG, or JPEG files.")
         return
     

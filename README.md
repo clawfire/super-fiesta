@@ -15,7 +15,38 @@ Perfect for event photographers, party organizers, or anyone preparing photos fo
 
 ## Quick Start
 
-1. **Install dependencies:**
+### Option 1: Using Virtual Environment (Recommended)
+
+1. **Create and activate a virtual environment:**
+   ```bash
+   # Create virtual environment
+   python3 -m venv super-fiesta
+   
+   # Activate it (macOS/Linux)
+   source super-fiesta/bin/activate
+   
+   # On Windows, use:
+   # super-fiesta\Scripts\activate
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Run the script:**
+   ```bash
+   python ppp.py
+   ```
+
+4. **When finished, deactivate:**
+   ```bash
+   deactivate
+   ```
+
+### Option 2: System-wide Installation
+
+1. **Install dependencies globally:**
    ```bash
    pip install -r requirements.txt
    ```
@@ -25,7 +56,12 @@ Perfect for event photographers, party organizers, or anyone preparing photos fo
    python ppp.py
    ```
 
-3. **Follow the prompts** to configure your settings and select folders
+### Why Use Virtual Environments?
+
+Virtual environments isolate your project dependencies and prevent conflicts with other Python projects. This is especially important for:
+- **Avoiding dependency conflicts** between different projects
+- **Ensuring consistent behavior** across different machines
+- **Easy cleanup** - just delete the folder to remove all dependencies
 
 ## How to use
 
