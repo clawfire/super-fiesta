@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import sys
 from configparser import ConfigParser
 from PIL import Image
 from tqdm import tqdm
@@ -44,6 +45,76 @@ def load_config(config_file):
     return config
 
 
+def print_header():
+    """Print a welcome header with branding."""
+    print("\n" + "="*60)
+    print("🎉 SUPER FIESTA - Party Picture Processor 🎉")
+    print("Transform your photos into perfect social media squares!")
+    print("="*60 + "\n")
+
+
+def print_section(title):
+    """Print a section header."""
+    print(f"\n{'─'*50}")
+    print(f"📋 {title}")
+    print("─"*50)
+
+
+def print_settings_summary(settings):
+    """Display current settings in a formatted table."""
+    print("\n📊 Current Settings:")
+    print("┌─────────────────────┬──────────────────────────┐")
+    print(f"│ Image Size          │ {settings['side_length']}% of square          │")
+    print(f"│ Background Color    │ RGB({settings['background_color']})     │")
+    print(f"│ JPEG Quality        │ {settings['jpeg_quality']}/100                   │")
+    print(f"│ Tag Filtering       │ {'Enabled' if settings['use_tags'] == 'yes' else 'Disabled':25} │")
+    if settings['use_tags'] == 'yes':
+        print(f"│ Tag Name            │ '{settings.get('tag', 'To Publish')}'{' '*(25-len(settings.get('tag', 'To Publish'))-2)}│")
+    print("└─────────────────────┴──────────────────────────┘\n")
+
+
+def get_user_choice(prompt, choices, default=None):
+    """Get user choice with validation and clear options display."""
+    choice_str = "/".join([f"[{c.upper()}]" if c == default else c.lower() for c in choices])
+    while True:
+        response = input(f"{prompt} ({choice_str}): ").strip().lower()
+        if not response and default:
+            return default
+        if response in [c.lower() for c in choices]:
+            return response
+        print(f"❌ Please enter one of: {', '.join(choices)}")
+
+
+def get_folder_path(prompt, default=None):
+    """Get folder path with validation and default handling."""
+    while True:
+        if default:
+            path = input(f"{prompt} (default: {default}): ").strip() or default
+        else:
+            path = input(f"{prompt}: ").strip()
+        
+        if os.path.exists(path) and os.path.isdir(path):
+            return path
+        elif path == default and default:  # Allow default even if it doesn't exist yet
+            return path
+        else:
+            print(f"❌ Directory not found: {path}")
+            retry = get_user_choice("Would you like to try again?", ["y", "n"], "y")
+            if retry == "n":
+                sys.exit("Operation cancelled by user.")
+
+
+def confirm_processing(input_folder, output_folder, file_count):
+    """Show processing confirmation with file count."""
+    print(f"\n🚀 Ready to Process:")
+    print(f"   📁 Source: {input_folder}")
+    print(f"   📁 Output: {output_folder}")
+    print(f"   📸 Files: {file_count} images")
+    
+    confirm = get_user_choice("\nStart processing?", ["y", "n"], "y")
+    return confirm == "y"
+
+
 def validate_config_value(value, value_type, min_val=None, max_val=None, valid_values=None):
     """Validate and convert configuration values."""
     try:
@@ -72,53 +143,82 @@ def validate_config_value(value, value_type, min_val=None, max_val=None, valid_v
 def ask_or_load_config(script_dir):
     config_file = os.path.join(script_dir, 'sf_config.ini')
     config = load_config(config_file)
+    
+    # Check if we have existing valid config
+    config_exists = False
     if 'SETTINGS' in config:
-        print("Using existing configuration")
-        # Validate existing config
         try:
             validate_config_value(config['SETTINGS']['side_length'], int, 1, 100)
             validate_config_value(config['SETTINGS']['background_color'], 'rgb')
             validate_config_value(config['SETTINGS']['jpeg_quality'], int, 1, 100)
+            config_exists = True
+            print("✅ Found existing configuration")
         except (ValueError, KeyError) as e:
-            print(f"❌ Invalid configuration: {e}")
-            print("Please reconfigure:")
+            print(f"❌ Invalid configuration found: {e}")
             config.clear()
     
-    if 'SETTINGS' not in config:
-        print("No configuration found, asking for user input")
-        config['SETTINGS'] = {}
-        
-        while True:
-            try:
-                side_length = input("Enter the percentage size for the embedded image (95 by default): ") or '95'
-                config['SETTINGS']['side_length'] = str(validate_config_value(side_length, int, 1, 100))
-                break
-            except ValueError as e:
-                print(f"❌ {e}")
-        
-        while True:
-            try:
-                bg_color = input("Enter the background color in RGB format (100,0,180 by default): ") or '100,0,180'
-                config['SETTINGS']['background_color'] = validate_config_value(bg_color, 'rgb')
-                break
-            except ValueError as e:
-                print(f"❌ {e}")
-        
-        while True:
-            try:
-                quality = input("Enter the JPEG quality (1-100, where 100 is the best quality, 95 by default): ") or '95'
-                config['SETTINGS']['jpeg_quality'] = str(validate_config_value(quality, int, 1, 100))
-                break
-            except ValueError as e:
-                print(f"❌ {e}")
-        
-        use_tags = input("Do you want to filter images by tag? (Y/N, default Y): [Y/n] ").strip().lower() or 'y'
-        config['SETTINGS']['use_tags'] = 'yes' if use_tags in ['y', 'yes', ''] else 'no'
-        
-        if config['SETTINGS']['use_tags'] == 'yes':
-            config['SETTINGS']['tag'] = input("Enter the tag to use (default 'To Publish'): ") or 'To Publish'
-        
-        save_config(config, config_file)
+    if config_exists:
+        print_settings_summary(config['SETTINGS'])
+        reconfigure = get_user_choice("Would you like to reconfigure settings?", ["y", "n"], "n")
+        if reconfigure == "n":
+            return config
+    
+    # Configuration needed
+    print_section("Configuration Setup")
+    print("Let's configure your image processing preferences.\n")
+    
+    config['SETTINGS'] = {}
+    
+    # Image size configuration
+    print("🖼️  Image Size Configuration:")
+    print("   This controls how much of the square your image fills.")
+    print("   95% leaves a small border, 100% fills the entire square.")
+    while True:
+        try:
+            side_length = input("   Enter percentage (1-100, default 95): ") or '95'
+            config['SETTINGS']['side_length'] = str(validate_config_value(side_length, int, 1, 100))
+            break
+        except ValueError as e:
+            print(f"   ❌ {e}")
+    
+    # Background color configuration
+    print("\n🎨 Background Color Configuration:")
+    print("   Enter RGB values separated by commas (0-255 each).")
+    print("   Examples: 100,0,180 (purple), 255,255,255 (white), 0,0,0 (black)")
+    while True:
+        try:
+            bg_color = input("   Enter RGB values (default 100,0,180): ") or '100,0,180'
+            config['SETTINGS']['background_color'] = validate_config_value(bg_color, 'rgb')
+            break
+        except ValueError as e:
+            print(f"   ❌ {e}")
+    
+    # JPEG quality configuration
+    print("\n📷 JPEG Quality Configuration:")
+    print("   Higher values = better quality but larger files.")
+    print("   95 is recommended for social media sharing.")
+    while True:
+        try:
+            quality = input("   Enter quality (1-100, default 95): ") or '95'
+            config['SETTINGS']['jpeg_quality'] = str(validate_config_value(quality, int, 1, 100))
+            break
+        except ValueError as e:
+            print(f"   ❌ {e}")
+    
+    # Tag filtering configuration
+    print("\n🏷️  Tag Filtering Configuration:")
+    print("   Use macOS Finder tags to process only selected photos.")
+    print("   Useful for marking specific photos before batch processing.")
+    use_tags = get_user_choice("   Enable tag filtering?", ["y", "n"], "y")
+    config['SETTINGS']['use_tags'] = 'yes' if use_tags == 'y' else 'no'
+    
+    if config['SETTINGS']['use_tags'] == 'yes':
+        print("   Tag photos in Finder with this tag before processing.")
+        tag = input("   Enter tag name (default 'To Publish'): ") or 'To Publish'
+        config['SETTINGS']['tag'] = tag
+    
+    save_config(config, config_file)
+    print("\n✅ Configuration saved!")
     
     return config
 
@@ -177,22 +277,66 @@ def batch_square(folder_path, output_folder, side_length, background_color, use_
 
 
 # Main execution logic
-script_dir = os.path.dirname(os.path.abspath(__file__))
-print(f"Script directory is {script_dir}")
-config = ask_or_load_config(script_dir)
-settings = config['SETTINGS']
-current_directory = os.getcwd()
-input_folder = input(f"Enter the path to the source folder ({
-                     current_directory} by default): ") or current_directory
-output_folder = input(f"Enter the path to the output folder ('output' by default): ") or os.path.join(
-    current_directory, "output")
+def main():
+    print_header()
+    
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    config = ask_or_load_config(script_dir)
+    settings = config['SETTINGS']
+    
+    print_section("Folder Selection")
+    current_directory = os.getcwd()
+    
+    print("📁 Select your source folder containing the photos to process:")
+    input_folder = get_folder_path("   Source folder", current_directory)
+    
+    print("\n📁 Select where to save the processed photos:")
+    default_output = os.path.join(current_directory, "output")
+    output_folder = get_folder_path("   Output folder", default_output)
+    
+    # Preview files to be processed
+    print_section("File Preview")
+    print("🔍 Scanning for images...")
+    
+    files_to_process = get_files_with_tag(input_folder, settings.get('tag', 'To Publish')) if settings['use_tags'] == 'yes' else [
+        os.path.join(input_folder, f) for f in os.listdir(input_folder) 
+        if f.lower().endswith(('.png', '.jpg', '.jpeg'))
+    ]
+    
+    if not files_to_process:
+        print("❌ No images found to process!")
+        if settings['use_tags'] == 'yes':
+            print(f"   Make sure photos are tagged with '{settings.get('tag', 'To Publish')}' in Finder.")
+        else:
+            print(f"   Make sure the folder contains PNG, JPG, or JPEG files.")
+        return
+    
+    # Confirm processing
+    if not confirm_processing(input_folder, output_folder, len(files_to_process)):
+        print("\n❌ Processing cancelled by user.")
+        return
+    
+    # Start processing
+    print_section("Processing Images")
+    batch_square(
+        input_folder,
+        output_folder,
+        int(settings['side_length']),
+        tuple(map(int, settings['background_color'].split(','))),
+        settings['use_tags'] == 'yes',
+        settings.get('tag', 'To Publish'),
+        int(settings['jpeg_quality'])
+    )
+    
+    print("\n🎉 All done! Your party pictures are ready for social media!")
 
-batch_square(
-    input_folder,
-    output_folder,
-    int(settings['side_length']),
-    tuple(map(int, settings['background_color'].split(','))),
-    settings['use_tags'] == 'yes',
-    settings.get('tag', 'To Publish'),
-    int(settings['jpeg_quality'])
-)
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n\n❌ Process interrupted by user. Goodbye!")
+    except Exception as e:
+        print(f"\n❌ An unexpected error occurred: {e}")
+        print("Please check your inputs and try again.")
+

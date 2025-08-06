@@ -1,37 +1,72 @@
-# Super Fiesta: Your Party Picture Butler
+# Super Fiesta: Party Picture Processor
 
-Welcome to Super Fiesta, the ultimate tool designed to enhance your party pictures for social media sharing! This easy-to-use script transforms your images into perfectly square formats, ensuring they're primed for platforms like Instagram. Whether you're handling a batch of photos from a recent event or preparing images in advance, Super Fiesta streamlines the process, allowing you to customize size, background color, and more, all from your local folder.
+A Python tool that transforms your party photos into perfectly square formats optimized for social media platforms like Instagram.
 
-Get started today and make your party pictures pop!
+## What it does
 
-## Prerequisites
+Super Fiesta takes your party pictures and:
+- **Resizes them into perfect squares** (1080x1080px) with colored backgrounds
+- **Preserves aspect ratios** by centering images within the square
+- **Batch processes** entire folders of images
+- **Filters by macOS tags** (optional) to process only selected photos
+- **Maintains high quality** with customizable JPEG compression
 
-1. Clone the repository
-2. Install the dependencies with `pip install -r requirements.txt`
+Perfect for event photographers, party organizers, or anyone preparing photos for social media!
 
-## Usage
+## Quick Start
 
-Run the script with `python party_picture_preparator.py` and follow the instructions. The script will ask you for the folder where the pictures are and will create a new folder with the edited pictures. It will also ask you for the maximum size of the pictures and the background color.
+1. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-## Features
+2. **Run the script:**
+   ```bash
+   python ppp.py
+   ```
 
-* Contain pictures in a square format easy to share on social media
-* Can filter the pictures to edit by using macOS tags
-* Can specify the folder where the pictures are when running the script
-* Can specify the folder where the edited pictures will be saved when running the script
-* Can specify the percent of the square size you want to use (for the longest side of the original picture)
-* Can specify the background color when running the script
-* Can specify the quality of the edited pictures when running the script
+3. **Follow the prompts** to configure your settings and select folders
 
-## Planned features / TODO
+## How to use
 
-- [ ] Add a better GUI
-- [ ] Add the possibility to add a watermark
-- [ ] Add the possibility to specify the watermark position
-- [ ] Add the possibility to specify the watermark size
-- [ ] Add the possibility to specify the watermark transparency
-- [ ] Add resizing options to also generate original ratio pictures but with lower size, optimized for web sharing in terms of quality and weight, including watermark
-- [x] Persist the user preferences in a configuration file
+### First run
+The script will ask you to configure:
+- **Image size**: Percentage of the square to fill (default: 95%)
+- **Background color**: RGB values like `100,0,180` (purple)
+- **JPEG quality**: 1-100 scale (default: 95)
+- **Tag filtering**: Use macOS Finder tags to select specific photos
+
+### Subsequent runs
+Your preferences are saved automatically. The script will only ask for:
+- **Source folder**: Where your original photos are located
+- **Output folder**: Where processed photos will be saved
+
+### macOS Tag Filtering
+If enabled, only photos tagged with your specified tag (default: "To Publish") will be processed. This is perfect for marking specific photos in Finder before batch processing.
+
+## Key Features
+
+✅ **Smart resizing** - Images are proportionally scaled to fit perfectly within squares  
+✅ **Batch processing** - Handle hundreds of photos at once with progress tracking  
+✅ **Tag filtering** - Use macOS Finder tags to select specific photos  
+✅ **Persistent settings** - Your preferences are remembered between sessions  
+✅ **Error handling** - Skips corrupted files and continues processing  
+✅ **Quality control** - Customizable JPEG compression for optimal file sizes  
+✅ **Format conversion** - Outputs consistent JPEG files regardless of input format  
+✅ **User-friendly interface** - Clean terminal interface with visual formatting and helpful prompts
+
+## Roadmap
+
+### 🎯 Next Up
+- **Watermark System** - Add logos/text with customizable position, size, and transparency
+- **Multi-format Output** - Generate web-optimized versions alongside squares
+- **Drag & Drop Interface** - Desktop app with drag-and-drop functionality
+
+### ✅ Recently Added
+- Enhanced terminal interface with visual formatting and better user experience
+- Persistent user preferences via configuration file
+- Robust error handling and input validation
+- Progress tracking with success/error counts
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
