@@ -4,7 +4,7 @@ import os
 import subprocess
 import sys
 from configparser import ConfigParser
-from PIL import Image
+from PIL import Image, ImageEnhance
 from tqdm import tqdm
 
 
@@ -70,6 +70,13 @@ def print_settings_summary(settings):
     print(f"│ Tag Filtering       │ {'Enabled' if settings['use_tags'] == 'yes' else 'Disabled':25} │")
     if settings['use_tags'] == 'yes':
         print(f"│ Tag Name            │ '{settings.get('tag', 'To Publish')}'{' '*(25-len(settings.get('tag', 'To Publish'))-2)}│")
+    print(f"│ Watermark           │ {'Enabled' if settings.get('use_watermark') == 'yes' else 'Disabled':25} │")
+    if settings.get('use_watermark') == 'yes':
+        watermark_file = os.path.basename(settings.get('watermark_path', ''))
+        print(f"│ Watermark File      │ {watermark_file[:25]:25} │")
+        print(f"│ Watermark Position  │ {settings.get('watermark_position', 'bottom-right'):25} │")
+        print(f"│ Watermark Size      │ {settings.get('watermark_size', '10')}% of image width{' '*(10-len(settings.get('watermark_size', '10')))} │")
+        print(f"│ Watermark Opacity   │ {settings.get('watermark_opacity', '80')}%{' '*(23-len(settings.get('watermark_opacity', '80')))} │")
     print("└─────────────────────┴──────────────────────────┘\n")
 
 
@@ -153,6 +160,28 @@ def validate_config_value(value, value_type, min_val=None, max_val=None, valid_v
                 if not 0 <= part <= 255:
                     raise ValueError("RGB values must be between 0-255")
             return value
+        elif value_type == 'file_path':
+            if value and not os.path.exists(value):
+                raise ValueError(f"File not found: {value}")
+            return value
+        elif value_type == 'position':
+            valid_positions = ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'bottom-center', 'center']
+            if value not in valid_positions:
+                raise ValueError(f"Position must be one of: {', '.join(valid_positions)}")
+            return value
+        elif value_type == 'png_file':
+            if not value.lower().endswith('.png'):
+                raise ValueError("Watermark must be a PNG file with transparency")
+            if value and not os.path.exists(value):
+                raise ValueError(f"File not found: {value}")
+            # Check if PNG has transparency
+            try:
+                with Image.open(value) as img:
+                    if img.mode not in ('RGBA', 'LA') and 'transparency' not in img.info:
+                        raise ValueError("PNG file must have transparency (alpha channel)")
+            except Exception as e:
+                raise ValueError(f"Invalid PNG file: {e}")
+            return value
         elif valid_values and value not in valid_values:
             raise ValueError(f"Value must be one of: {valid_values}")
         return value
@@ -171,6 +200,13 @@ def ask_or_load_config(script_dir):
             validate_config_value(config['SETTINGS']['side_length'], int, 1, 100)
             validate_config_value(config['SETTINGS']['background_color'], 'rgb')
             validate_config_value(config['SETTINGS']['jpeg_quality'], int, 1, 100)
+            # Validate watermark settings if they exist
+            if config['SETTINGS'].get('use_watermark') == 'yes':
+                validate_config_value(config['SETTINGS'].get('watermark_path', ''), 'png_file')
+                validate_config_value(config['SETTINGS'].get('watermark_position', 'bottom-center'), 'position')
+                validate_config_value(config['SETTINGS'].get('watermark_size', '14'), int, 1, 50)
+                validate_config_value(config['SETTINGS'].get('watermark_opacity', '100'), int, 10, 100)
+                validate_config_value(config['SETTINGS'].get('watermark_margin', '17'), int, 0, 100)
             config_exists = True
             print("✅ Found existing configuration")
         except (ValueError, KeyError) as e:
@@ -237,13 +273,150 @@ def ask_or_load_config(script_dir):
         tag = input("   Enter tag name (default 'To Publish'): ") or 'To Publish'
         config['SETTINGS']['tag'] = tag
     
+    # Watermark configuration
+    print("\n💧 Watermark Configuration:")
+    print("   Add a logo or text watermark to your processed images.")
+    use_watermark = get_user_choice("   Enable watermark?", ["y", "n"], "n")
+    config['SETTINGS']['use_watermark'] = 'yes' if use_watermark == 'y' else 'no'
+    
+    if config['SETTINGS']['use_watermark'] == 'yes':
+        print("   Select a PNG image file with transparency (alpha channel required).")
+        while True:
+            try:
+                watermark_path = input("   Watermark PNG path: ").strip()
+                if not watermark_path:
+                    raise ValueError("Watermark path cannot be empty")
+                validate_config_value(watermark_path, 'png_file')
+                config['SETTINGS']['watermark_path'] = watermark_path
+                break
+            except ValueError as e:
+                print(f"   ❌ {e}")
+        
+        print("   \n   Position options: top-left, top-right, bottom-left, bottom-right, bottom-center, center")
+        while True:
+            try:
+                position = input("   Watermark position (default bottom-center): ") or 'bottom-center'
+                validate_config_value(position, 'position')
+                config['SETTINGS']['watermark_position'] = position
+                break
+            except ValueError as e:
+                print(f"   ❌ {e}")
+        
+        while True:
+            try:
+                size = input("   Watermark size as % of image width (1-50, default 14): ") or '14'
+                config['SETTINGS']['watermark_size'] = str(validate_config_value(size, int, 1, 50))
+                break
+            except ValueError as e:
+                print(f"   ❌ {e}")
+        
+        while True:
+            try:
+                opacity = input("   Watermark opacity (10-100, default 100): ") or '100'
+                config['SETTINGS']['watermark_opacity'] = str(validate_config_value(opacity, int, 10, 100))
+                break
+            except ValueError as e:
+                print(f"   ❌ {e}")
+        
+        while True:
+            try:
+                margin = input("   Margin from edges as % of image (0-100, default 17): ") or '17'
+                config['SETTINGS']['watermark_margin'] = str(validate_config_value(margin, int, 0, 100))
+                break
+            except ValueError as e:
+                print(f"   ❌ {e}")
+    
     save_config(config, config_file)
     print("\n✅ Configuration saved!")
     
     return config
 
 
-def batch_square(folder_path, output_folder, side_length, background_color, use_tags, tag, jpeg_quality):
+def load_and_prepare_watermark(watermark_path, target_width, watermark_size, opacity):
+    """Load watermark image and prepare it for application."""
+    try:
+        watermark = Image.open(watermark_path)
+        
+        # Convert to RGBA if not already
+        if watermark.mode != 'RGBA':
+            watermark = watermark.convert('RGBA')
+        
+        # Calculate watermark size
+        watermark_width = int(target_width * (watermark_size / 100))
+        watermark_height = int((watermark.height * watermark_width) / watermark.width)
+        
+        # Resize watermark
+        watermark = watermark.resize((watermark_width, watermark_height), Image.Resampling.LANCZOS)
+        
+        # Apply opacity
+        if opacity < 100:
+            # Create alpha mask for opacity
+            alpha = watermark.split()[-1]  # Get alpha channel
+            alpha = ImageEnhance.Brightness(alpha).enhance(opacity / 100)
+            watermark.putalpha(alpha)
+        
+        return watermark
+    except Exception as e:
+        print(f"\n❌ Error loading watermark: {e}")
+        return None
+
+
+def calculate_watermark_position(image_size, watermark_size, position, margin):
+    """Calculate watermark position coordinates."""
+    img_width, img_height = image_size
+    wm_width, wm_height = watermark_size
+    
+    positions = {
+        'top-left': (margin, margin),
+        'top-right': (img_width - wm_width - margin, margin),
+        'bottom-left': (margin, img_height - wm_height - margin),
+        'bottom-right': (img_width - wm_width - margin, img_height - wm_height - margin),
+        'bottom-center': ((img_width - wm_width) // 2, img_height - wm_height - margin),
+        'center': ((img_width - wm_width) // 2, (img_height - wm_height) // 2)
+    }
+    
+    return positions.get(position, positions['bottom-right'])
+
+
+def apply_watermark(image, watermark_path, watermark_size, position, opacity, margin_percent):
+    """Apply watermark to an image."""
+    try:
+        # Load and prepare watermark
+        watermark = load_and_prepare_watermark(
+            watermark_path, 
+            image.width, 
+            watermark_size, 
+            opacity
+        )
+        
+        if watermark is None:
+            return image  # Return original image if watermark failed
+        
+        # Calculate margin in pixels (percentage of smaller image dimension)
+        margin_pixels = int(min(image.width, image.height) * (margin_percent / 100))
+        
+        # Calculate position
+        wm_position = calculate_watermark_position(
+            (image.width, image.height),
+            (watermark.width, watermark.height),
+            position,
+            margin_pixels
+        )
+        
+        # Create a copy of the image to avoid modifying the original
+        result_image = image.copy()
+        
+        # Apply watermark
+        result_image.paste(watermark, wm_position, watermark)
+        
+        return result_image
+        
+    except Exception as e:
+        print(f"\n❌ Error applying watermark: {e}")
+        return image  # Return original image on error
+
+
+def batch_square(folder_path, output_folder, side_length, background_color, use_tags, tag, jpeg_quality, watermark_settings=None):
     if not os.path.exists(folder_path):
         print(f"❌ Folder doesn't exist: {folder_path}")
         return
@@ -278,6 +451,17 @@ def batch_square(folder_path, output_folder, side_length, background_color, use_
                 new_img = Image.new('RGB', (output_size, output_size), background_color)
                 position = ((output_size - new_width) // 2, (output_size - new_height) // 2)
                 new_img.paste(resized_img, position)
+                
+                # Apply watermark if enabled
+                if watermark_settings and watermark_settings.get('use_watermark') == 'yes':
+                    new_img = apply_watermark(
+                        new_img,
+                        watermark_settings['watermark_path'],
+                        int(watermark_settings['watermark_size']),
+                        watermark_settings['watermark_position'],
+                        int(watermark_settings['watermark_opacity']),
+                        int(watermark_settings['watermark_margin'])
+                    )
                 
                 output_path = os.path.join(output_folder, os.path.basename(file_path))
                 # Ensure output is always JPEG
@@ -352,6 +536,19 @@ def main():
     
     # Start processing
     print_section("Processing Images")
+    
+    # Prepare watermark settings
+    watermark_settings = None
+    if settings.get('use_watermark') == 'yes':
+        watermark_settings = {
+            'use_watermark': settings['use_watermark'],
+            'watermark_path': settings['watermark_path'],
+            'watermark_position': settings.get('watermark_position', 'bottom-center'),
+            'watermark_size': settings.get('watermark_size', '14'),
+            'watermark_opacity': settings.get('watermark_opacity', '100'),
+            'watermark_margin': settings.get('watermark_margin', '17')
+        }
+    
     batch_square(
         input_folder,
         output_folder,
@@ -359,7 +556,8 @@ def main():
         tuple(map(int, settings['background_color'].split(','))),
         settings['use_tags'] == 'yes',
         settings.get('tag', 'To Publish'),
-        int(settings['jpeg_quality'])
+        int(settings['jpeg_quality']),
+        watermark_settings
     )
     
     print("\n🎉 All done! Your party pictures are ready for social media!")

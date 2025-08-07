@@ -71,6 +71,7 @@ The script will ask you to configure:
 - **Background color**: RGB values like `100,0,180` (purple)
 - **JPEG quality**: 1-100 scale (default: 95)
 - **Tag filtering**: Use macOS Finder tags to select specific photos
+- **Watermark settings**: Logo/image overlay with position, size, and opacity controls
 
 ### Subsequent runs
 Your preferences are saved automatically. The script will only ask for:
@@ -79,6 +80,15 @@ Your preferences are saved automatically. The script will only ask for:
 
 ### macOS Tag Filtering
 If enabled, only photos tagged with your specified tag (default: "To Publish") will be processed. This is perfect for marking specific photos in Finder before batch processing.
+
+### Watermark System
+Add your logo or branding to processed images:
+- **Support for PNG images** with transparency for professional results
+- **Flexible positioning**: top-left, top-right, bottom-left, bottom-right, or center
+- **Adjustable size**: 1-50% of image width
+- **Opacity control**: 10-100% transparency
+- **Margin settings**: Distance from edges (0-100 pixels)
+- **Automatic scaling**: Watermarks resize proportionally to maintain aspect ratio
 
 ## Key Features
 
@@ -89,16 +99,19 @@ If enabled, only photos tagged with your specified tag (default: "To Publish") w
 ✅ **Error handling** - Skips corrupted files and continues processing  
 ✅ **Quality control** - Customizable JPEG compression for optimal file sizes  
 ✅ **Format conversion** - Outputs consistent JPEG files regardless of input format  
-✅ **User-friendly interface** - Clean terminal interface with visual formatting and helpful prompts
+✅ **User-friendly interface** - Clean terminal interface with visual formatting and helpful prompts  
+✅ **Professional watermarks** - Add logos with customizable position, size, and transparency
 
 ## Roadmap
 
 ### 🎯 Next Up
-- **Watermark System** - Add logos/text with customizable position, size, and transparency
 - **Multi-format Output** - Generate web-optimized versions alongside squares
+- **Batch size options** - Configure custom output dimensions beyond 1080x1080
+- **Preview mode** - Show sample processed image before batch processing
 - **Drag & Drop Interface** - Desktop app with drag-and-drop functionality
 
 ### ✅ Recently Added
+- **Professional watermark system** with flexible positioning, sizing, and opacity controls
 - Enhanced terminal interface with visual formatting and better user experience
 - Persistent user preferences via configuration file
 - Robust error handling and input validation
