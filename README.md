@@ -72,6 +72,7 @@ The script will ask you to configure:
 - **JPEG quality**: 1-100 scale (default: 95)
 - **Tag filtering**: Use macOS Finder tags to select specific photos
 - **Watermark settings**: Logo/image overlay with position, size, and opacity controls
+- **Batch renaming**: Choose from multiple naming patterns for organized output
 
 ### Subsequent runs
 Your preferences are saved automatically. The script will only ask for:
@@ -90,6 +91,15 @@ Add your logo or branding to processed images:
 - **Margin settings**: Distance from edges (0-100 pixels)
 - **Automatic scaling**: Watermarks resize proportionally to maintain aspect ratio
 
+### Batch Renaming System
+Organize your processed images with intelligent naming patterns:
+- **Original**: Keep original filenames (default behavior)
+- **Sequential**: Clean numbered sequence (e.g., `Party_001.jpg`, `Party_002.jpg`)
+- **Event-based**: Include event name and date (e.g., `Birthday_2024-01-15_001.jpg`)
+- **Customizable options**: Set your own prefix, date format, and number padding
+- **Conflict detection**: Warns about existing files and asks for confirmation
+- **Renaming preview**: Shows exactly how files will be renamed before processing
+
 ## Key Features
 
 ✅ **Smart resizing** - Images are proportionally scaled to fit perfectly within squares  
@@ -100,7 +110,8 @@ Add your logo or branding to processed images:
 ✅ **Quality control** - Customizable JPEG compression for optimal file sizes  
 ✅ **Format conversion** - Outputs consistent JPEG files regardless of input format  
 ✅ **User-friendly interface** - Clean terminal interface with visual formatting and helpful prompts  
-✅ **Professional watermarks** - Add logos with customizable position, size, and transparency
+✅ **Professional watermarks** - Add logos with customizable position, size, and transparency  
+✅ **Smart batch renaming** - Organize files with sequential, event-based, or custom naming patterns
 
 ## Roadmap
 
@@ -111,6 +122,7 @@ Add your logo or branding to processed images:
 - **Drag & Drop Interface** - Desktop app with drag-and-drop functionality
 
 ### ✅ Recently Added
+- **Smart batch renaming system** with sequential, event-based, and custom naming patterns
 - **Professional watermark system** with flexible positioning, sizing, and opacity controls
 - Enhanced terminal interface with visual formatting and better user experience
 - Persistent user preferences via configuration file

@@ -3,6 +3,7 @@
 import os
 import subprocess
 import sys
+from datetime import datetime
 from configparser import ConfigParser
 from PIL import Image, ImageEnhance
 from tqdm import tqdm
@@ -77,6 +78,23 @@ def print_settings_summary(settings):
         print(f"│ Watermark Position  │ {settings.get('watermark_position', 'bottom-right'):25} │")
         print(f"│ Watermark Size      │ {settings.get('watermark_size', '10')}% of image width{' '*(10-len(settings.get('watermark_size', '10')))} │")
         print(f"│ Watermark Opacity   │ {settings.get('watermark_opacity', '80')}%{' '*(23-len(settings.get('watermark_opacity', '80')))} │")
+    
+    # Renaming settings
+    naming_pattern = settings.get('naming_pattern', 'original')
+    print(f"│ Naming Pattern      │ {naming_pattern:25} │")
+    if naming_pattern == 'sequential':
+        prefix = settings.get('naming_prefix', 'Photo')
+        padding = settings.get('naming_padding', '3')
+        print(f"│ Naming Prefix       │ {prefix:25} │")
+        print(f"│ Number Padding      │ {padding} digits{' '*(18-len(padding))} │")
+    elif naming_pattern == 'event-based':
+        event = settings.get('naming_event', 'Event')
+        include_date = settings.get('naming_include_date', 'yes')
+        padding = settings.get('naming_padding', '3')
+        print(f"│ Event Name          │ {event:25} │")
+        print(f"│ Include Date        │ {'Yes' if include_date == 'yes' else 'No':25} │")
+        print(f"│ Number Padding      │ {padding} digits{' '*(18-len(padding))} │")
+    
     print("└─────────────────────┴──────────────────────────┘\n")
 
 
@@ -169,6 +187,11 @@ def validate_config_value(value, value_type, min_val=None, max_val=None, valid_v
             if value not in valid_positions:
                 raise ValueError(f"Position must be one of: {', '.join(valid_positions)}")
             return value
+        elif value_type == 'naming_pattern':
+            valid_patterns = ['original', 'sequential', 'event-based']
+            if value not in valid_patterns:
+                raise ValueError(f"Naming pattern must be one of: {', '.join(valid_patterns)}")
+            return value
         elif value_type == 'png_file':
             if not value.lower().endswith('.png'):
                 raise ValueError("Watermark must be a PNG file with transparency")
@@ -207,6 +230,10 @@ def ask_or_load_config(script_dir):
                 validate_config_value(config['SETTINGS'].get('watermark_size', '14'), int, 1, 50)
                 validate_config_value(config['SETTINGS'].get('watermark_opacity', '100'), int, 10, 100)
                 validate_config_value(config['SETTINGS'].get('watermark_margin', '17'), int, 0, 100)
+            # Validate renaming settings if they exist
+            if config['SETTINGS'].get('naming_pattern', 'original') != 'original':
+                validate_config_value(config['SETTINGS'].get('naming_pattern', 'original'), 'naming_pattern')
+                validate_config_value(config['SETTINGS'].get('naming_padding', '3'), int, 1, 5)
             config_exists = True
             print("✅ Found existing configuration")
         except (ValueError, KeyError) as e:
@@ -326,6 +353,46 @@ def ask_or_load_config(script_dir):
             except ValueError as e:
                 print(f"   ❌ {e}")
     
+    # Batch renaming configuration
+    print("\n🏷️  Batch Renaming Configuration:")
+    print("   Choose how to name your processed images.")
+    print("   Options: original (keep names), sequential (Party_001), event-based (Birthday_2024-01-15_001)")
+    while True:
+        try:
+            pattern = input("   Naming pattern (default original): ") or 'original'
+            validate_config_value(pattern, 'naming_pattern')
+            config['SETTINGS']['naming_pattern'] = pattern
+            break
+        except ValueError as e:
+            print(f"   ❌ {e}")
+    
+    if config['SETTINGS']['naming_pattern'] == 'sequential':
+        prefix = input("   Enter prefix for filenames (default 'Photo'): ") or 'Photo'
+        config['SETTINGS']['naming_prefix'] = prefix
+        
+        while True:
+            try:
+                padding = input("   Number padding (1=1, 2=01, 3=001, default 3): ") or '3'
+                config['SETTINGS']['naming_padding'] = str(validate_config_value(padding, int, 1, 5))
+                break
+            except ValueError as e:
+                print(f"   ❌ {e}")
+    
+    elif config['SETTINGS']['naming_pattern'] == 'event-based':
+        event_name = input("   Enter event name (default 'Event'): ") or 'Event'
+        config['SETTINGS']['naming_event'] = event_name
+        
+        use_date = get_user_choice("   Include date in filename?", ["y", "n"], "y")
+        config['SETTINGS']['naming_include_date'] = 'yes' if use_date == 'y' else 'no'
+        
+        while True:
+            try:
+                padding = input("   Number padding (1=1, 2=01, 3=001, default 3): ") or '3'
+                config['SETTINGS']['naming_padding'] = str(validate_config_value(padding, int, 1, 5))
+                break
+            except ValueError as e:
+                print(f"   ❌ {e}")
+    
     save_config(config, config_file)
     print("\n✅ Configuration saved!")
     
@@ -378,6 +445,69 @@ def calculate_watermark_position(image_size, watermark_size, position, margin):
     return positions.get(position, positions['bottom-right'])
 
 
+def generate_filename(original_path, index, naming_settings):
+    """Generate new filename based on naming pattern settings."""
+    original_name = os.path.basename(original_path)
+    original_base = os.path.splitext(original_name)[0]
+    
+    pattern = naming_settings.get('naming_pattern', 'original')
+    
+    if pattern == 'original':
+        # Keep original name but ensure .jpg extension
+        return f"{original_base}.jpg"
+    
+    elif pattern == 'sequential':
+        prefix = naming_settings.get('naming_prefix', 'Photo')
+        padding = int(naming_settings.get('naming_padding', '3'))
+        number = str(index).zfill(padding)
+        return f"{prefix}_{number}.jpg"
+    
+    elif pattern == 'event-based':
+        event = naming_settings.get('naming_event', 'Event')
+        include_date = naming_settings.get('naming_include_date', 'yes') == 'yes'
+        padding = int(naming_settings.get('naming_padding', '3'))
+        number = str(index).zfill(padding)
+        
+        if include_date:
+            today = datetime.now().strftime('%Y-%m-%d')
+            return f"{event}_{today}_{number}.jpg"
+        else:
+            return f"{event}_{number}.jpg"
+    
+    # Fallback to original
+    return f"{original_base}.jpg"
+
+
+def check_filename_conflicts(output_folder, filenames):
+    """Check for filename conflicts and return list of conflicts."""
+    conflicts = []
+    for filename in filenames:
+        full_path = os.path.join(output_folder, filename)
+        if os.path.exists(full_path):
+            conflicts.append(filename)
+    return conflicts
+
+
+def preview_renaming(files_to_process, naming_settings):
+    """Show preview of how files will be renamed."""
+    print("\n📋 Renaming Preview:")
+    print("┌─────────────────────────┬─────────────────────────┐")
+    print("│ Original Name           │ New Name                │")
+    print("├─────────────────────────┼─────────────────────────┤")
+    
+    preview_count = min(5, len(files_to_process))
+    for i in range(preview_count):
+        original = os.path.basename(files_to_process[i])
+        new_name = generate_filename(files_to_process[i], i + 1, naming_settings)
+        print(f"│ {original[:23]:23} │ {new_name[:23]:23} │")
+    
+    if len(files_to_process) > preview_count:
+        remaining = len(files_to_process) - preview_count
+        print(f"│ ... and {remaining} more files     │ ... and {remaining} more files     │")
+    
+    print("└─────────────────────────┴─────────────────────────┘")
+
+
 def apply_watermark(image, watermark_path, watermark_size, position, opacity, margin_percent):
     """Apply watermark to an image."""
     try:
@@ -416,7 +546,7 @@ def apply_watermark(image, watermark_path, watermark_size, position, opacity, ma
         return image  # Return original image on error
 
 
-def batch_square(folder_path, output_folder, side_length, background_color, use_tags, tag, jpeg_quality, watermark_settings=None):
+def batch_square(folder_path, output_folder, side_length, background_color, use_tags, tag, jpeg_quality, watermark_settings=None, naming_settings=None):
     if not os.path.exists(folder_path):
         print(f"❌ Folder doesn't exist: {folder_path}")
         return
@@ -435,7 +565,7 @@ def batch_square(folder_path, output_folder, side_length, background_color, use_
     processed_count = 0
     error_count = 0
     
-    for file_path in tqdm(files_to_process, desc="Processing Images", unit="file"):
+    for i, file_path in enumerate(tqdm(files_to_process, desc="Processing Images", unit="file"), 1):
         try:
             with Image.open(file_path) as img:
                 # Convert to RGB if necessary (handles RGBA, P mode, etc.)
@@ -463,11 +593,15 @@ def batch_square(folder_path, output_folder, side_length, background_color, use_
                         int(watermark_settings['watermark_margin'])
                     )
                 
-                output_path = os.path.join(output_folder, os.path.basename(file_path))
-                # Ensure output is always JPEG
-                if not output_path.lower().endswith('.jpg'):
-                    base_name = os.path.splitext(output_path)[0]
-                    output_path = base_name + '.jpg'
+                # Generate filename based on naming settings
+                if naming_settings:
+                    new_filename = generate_filename(file_path, i, naming_settings)
+                else:
+                    # Default behavior: keep original name with .jpg extension
+                    original_base = os.path.splitext(os.path.basename(file_path))[0]
+                    new_filename = f"{original_base}.jpg"
+                
+                output_path = os.path.join(output_folder, new_filename)
                 
                 new_img.save(output_path, 'JPEG', quality=jpeg_quality, optimize=True)
                 processed_count += 1
@@ -529,6 +663,34 @@ def main():
             print(f"   Make sure the folder contains PNG, JPG, or JPEG files.")
         return
     
+    # Prepare naming settings
+    naming_settings = {
+        'naming_pattern': settings.get('naming_pattern', 'original'),
+        'naming_prefix': settings.get('naming_prefix', 'Photo'),
+        'naming_event': settings.get('naming_event', 'Event'),
+        'naming_include_date': settings.get('naming_include_date', 'yes'),
+        'naming_padding': settings.get('naming_padding', '3')
+    }
+    
+    # Show renaming preview if not using original names
+    if naming_settings['naming_pattern'] != 'original':
+        preview_renaming(files_to_process, naming_settings)
+        
+        # Check for filename conflicts
+        new_filenames = [generate_filename(f, i+1, naming_settings) for i, f in enumerate(files_to_process)]
+        conflicts = check_filename_conflicts(output_folder, new_filenames)
+        if conflicts:
+            print(f"\n⚠️  {len(conflicts)} filename conflicts detected:")
+            for conflict in conflicts[:5]:  # Show first 5 conflicts
+                print(f"   • {conflict}")
+            if len(conflicts) > 5:
+                print(f"   • ... and {len(conflicts)-5} more")
+            
+            overwrite = get_user_choice("Overwrite existing files?", ["y", "n"], "n")
+            if overwrite == "n":
+                print("\n❌ Processing cancelled to avoid overwriting files.")
+                return
+    
     # Confirm processing
     if not confirm_processing(input_folder, output_folder, len(files_to_process)):
         print("\n❌ Processing cancelled by user.")
@@ -557,7 +719,8 @@ def main():
         settings['use_tags'] == 'yes',
         settings.get('tag', 'To Publish'),
         int(settings['jpeg_quality']),
-        watermark_settings
+        watermark_settings,
+        naming_settings
     )
     
     print("\n🎉 All done! Your party pictures are ready for social media!")
